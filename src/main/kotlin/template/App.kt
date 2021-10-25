@@ -6,33 +6,26 @@ package template
 import com.kotlindiscord.kord.extensions.ExtensibleBot
 import com.kotlindiscord.kord.extensions.utils.env
 import dev.kord.common.entity.Snowflake
-import template.extensions.TestExtension
+import template.extensions.ApplicationsExtension
+import java.nio.file.Path
+import kotlin.io.path.createDirectory
+import kotlin.io.path.div
+import kotlin.io.path.exists
 
-val TEST_SERVER_ID = Snowflake(
-    env("TEST_SERVER").toLong()  // Get the test server ID from the env vars or a .env file
-)
+internal val dataDirectory = Path.of("./data/")
+internal val dataFile = dataDirectory / "config.properties"
 
 private val TOKEN = env("TOKEN")   // Get the bot' token from the env vars or a .env file
+internal val GUILD_ID = Snowflake(env("GUILD_ID"))
 
 suspend fun main() {
+    if (!dataDirectory.exists()) {
+        dataDirectory.createDirectory()
+    }
+
     val bot = ExtensibleBot(TOKEN) {
-        chatCommands {
-            defaultPrefix = "?"
-            enabled = true
-
-            prefix { default ->
-                if (guildId == TEST_SERVER_ID) {
-                    // For the test server, we use ! as the command prefix
-                    "!"
-                } else {
-                    // For other servers, we use the configured default prefix
-                    default
-                }
-            }
-        }
-
         extensions {
-            add(::TestExtension)
+            add(::ApplicationsExtension)
         }
     }
 
