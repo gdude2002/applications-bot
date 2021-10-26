@@ -11,7 +11,7 @@ plugins {
     id("io.gitlab.arturbosch.detekt")
 }
 
-group = "template"
+group = "me.gserv.nate"
 version = "1.0-SNAPSHOT"
 
 repositories {

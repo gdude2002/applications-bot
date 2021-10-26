@@ -12,7 +12,7 @@ pluginManagement {
     }
 }
 
-rootProject.name = "template"
+rootProject.name = "applications-bot"
 
 enableFeaturePreview("VERSION_CATALOGS")
 

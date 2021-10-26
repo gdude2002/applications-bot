@@ -1,4 +1,4 @@
-package template.extensions
+package me.gserv.nate.applications.extensions
 
 import com.kotlindiscord.kord.extensions.checks.hasPermission
 import com.kotlindiscord.kord.extensions.commands.Arguments
@@ -11,13 +11,9 @@ import dev.kord.common.entity.Permission
 import dev.kord.common.entity.Snowflake
 import dev.kord.core.event.interaction.ButtonInteractionCreateEvent
 import dev.kord.core.event.message.MessageCreateEvent
-import template.GUILD_ID
-import template.dataFile
-import java.util.*
-import kotlin.io.path.exists
-import kotlin.io.path.reader
-import kotlin.io.path.writer
-import kotlin.random.Random
+import me.gserv.nate.applications.GUILD_ID
+import me.gserv.nate.applications.data.Settings
+import me.gserv.nate.applications.data.SettingsStorage
 
 const val TOKEN_SIZE = 12
 internal val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
@@ -25,24 +21,23 @@ internal val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
 class ApplicationsExtension : Extension() {
     override val name: String = "applications"
 
-    val config = Properties()
+    val configStorage = SettingsStorage()
+    val config: Settings get() = configStorage.current
 
-    val secret: String
-        get() = config.getProperty("secret")!!
+    var secret: String
+        get() = config.secretToken
+        set(value) {
+            config.secretToken = value; configStorage.save()
+        }
 
-    val channelId: Snowflake?
-        get() = run {
-            val prop = config.getProperty("channel")
-
-            if (prop == null) {
-                null
-            } else {
-                Snowflake(prop)
-            }
+    var channelId: Snowflake?
+        get() = config.channelId
+        set(value) {
+            config.channelId = value; configStorage.save()
         }
 
     override suspend fun setup() {
-        load()
+        configStorage.load()
 
         ephemeralSlashCommand(::ChannelArgs) {
             name = "application-channel"
@@ -53,8 +48,7 @@ class ApplicationsExtension : Extension() {
             check { hasPermission(Permission.ManageChannels) }
 
             action {
-                config["channel"] = arguments.channel.id.asString
-                save()
+                channelId = arguments.channel.id
 
                 respond {
                     content = "Applications channel set to ${arguments.channel.mention}"
@@ -81,24 +75,6 @@ class ApplicationsExtension : Extension() {
             }
         }
     }
-
-    fun load() {
-        if (dataFile.exists()) {
-            config.load(dataFile.reader())
-        } else {
-            config["secret"] = getToken(TOKEN_SIZE)
-            save()
-        }
-    }
-
-    fun save() {
-        config.store(dataFile.writer(), "Application extension settings")
-    }
-
-    fun getToken(length: Int) = (1..length)
-        .map { Random.nextInt(0, charPool.size) }
-        .map(charPool::get)
-        .joinToString("")
 
     inner class ChannelArgs : Arguments() {
         val channel by channel("channel", "Channel to send applications to")
