@@ -91,6 +91,7 @@ class ApplicationsExtension : Extension() {
 
     @Suppress("MagicNumber")
     override suspend fun setup() {
+        applications.load()
         configStorage.load()
 
         ephemeralSlashCommand {
@@ -107,7 +108,96 @@ class ApplicationsExtension : Extension() {
 
                 action {
                     respond {
-                        content = "**#TODO**"
+                        content = ">>> **__Applications Bot: Help__**\n\n" +
+
+                                "Hello! This bot exists to provide a simple applications system, allowing your " +
+                                "server to manually verify anyone that wants to join it. For this bot to work " +
+                                "properly, you'll need to ensure the following:\n\n" +
+
+                                "**»** That this bot has also been placed on a public-facing server, so that " +
+                                "applicants can send it DMs and learn how it works and what your application " +
+                                "criteria are\n\n" +
+
+                                "**»** That the bot has permission to create invites on your target server, and it " +
+                                "can send messages in the applications channel you've set up\n\n" +
+
+                                "**»** That `/config check` doesn't return any errors\n\n" +
+
+                                "**__Message Formatting__**\n\n" +
+
+                                "When configuring the various messages the bot can send to applicants, take note " +
+                                "of the following:\n\n" +
+
+                                "**Newlines:** To add a new line in your message, use `$NEWLINE_TOKEN`. This will " +
+                                "be replaced with a line break automatically.\n\n" +
+
+                                "**Denial reasons:** For the denial message, you must include `$REASON_TOKEN` - " +
+                                "this will be replaced with the text that was provided for the denial reason you " +
+                                "provide when you deny an application.\n\n" +
+
+                                "**Acceptance invites:** For the acceptance message, you must include " +
+                                "`$INVITE_TOKEN` - this will be replaced with the invite that was created for " +
+                                "the applicant to join the server.\n\n" +
+
+                                "If you have any further issues, feel free to ask Nate to bug me!\n" +
+                                "-- **gdude#2002**"
+                    }
+                }
+            }
+
+            ephemeralSubCommand {
+                name = "check"
+                description = "Check whether everything is ready to go"
+
+                requireBotPermissions(Permission.CreateInstantInvite)
+
+                action {
+                    var failures = false
+
+                    if (config.channelId == null) {
+                        respond {
+                            content = "**Error:** No applications channel has been set - set one with " +
+                                    "`/config channel`"
+                        }
+
+                        failures = true
+                    } else {
+                        @Suppress("TooGenericExceptionCaught")
+                        try {
+                            getApplicationsChannel()
+                        } catch (e: Exception) {
+                            respond {
+                                content =
+                                    "**Error:** Unable to get configured applications channel - set another " +
+                                            "with `/config channel`\n\n" +
+
+                                            "**Exception thrown:** ```\n$e\n```"
+                            }
+
+                            failures = true
+                        }
+                    }
+
+                    if (denialReasonCount <= 0) {
+                        respond {
+                            content = "**Error:** No denial reasons have been configured - add up to " +
+                                    "$MAX_DENIAL_REASONS with `/config add-denial`"
+                        }
+
+                        failures = true
+                    }
+
+                    if (failures) {
+                        respond {
+                            content = "One or more errors have been detected - please address them and run this " +
+                                    "command again.\n\n" +
+
+                                    "For more information on how this bot is configured, please use `/config help`"
+                        }
+                    } else {
+                        respond {
+                            content = "No issues detected - you're good to go!"
+                        }
                     }
                 }
             }
@@ -122,7 +212,7 @@ class ApplicationsExtension : Extension() {
                             content = "**Current response:**\n\n>>> $initialResponse"
                         }
                     } else {
-                        initialResponse = arguments.text!!
+                        initialResponse = arguments.text!!.replace(NEWLINE_TOKEN, "\n")
 
                         respond {
                             content = "Initial response message updated."
@@ -142,7 +232,7 @@ class ApplicationsExtension : Extension() {
                             content = "**Current response:**\n\n>>> $alreadyRepliedResponse"
                         }
                     } else {
-                        alreadyRepliedResponse = arguments.text!!
+                        alreadyRepliedResponse = arguments.text!!.replace(NEWLINE_TOKEN, "\n")
 
                         respond {
                             content = "\"Already applied\" message updated."
@@ -171,7 +261,7 @@ class ApplicationsExtension : Extension() {
                             return@action
                         }
 
-                        acceptedResponseTemplate = arguments.text!!
+                        acceptedResponseTemplate = arguments.text!!.replace(NEWLINE_TOKEN, "\n")
 
                         respond {
                             content = "Application acceptance message updated."
@@ -199,7 +289,7 @@ class ApplicationsExtension : Extension() {
                             return@action
                         }
 
-                        deniedResponseTemplate = arguments.text!!
+                        deniedResponseTemplate = arguments.text!!.replace(NEWLINE_TOKEN, "\n")
 
                         respond {
                             content = "Application denial message updated."
@@ -427,6 +517,7 @@ class ApplicationsExtension : Extension() {
         }
 
         event<MessageCreateEvent> {
+            check { failIf { event.message.author == null } }
             check { failIf { event.guildId != null } }
             check { failIf { channelId == null } }
 
@@ -479,8 +570,8 @@ class ApplicationsExtension : Extension() {
             id += "/$denialReason"
         }
 
-        interactionButton(app.state.style, id) {
-            label = when (app.state) {
+        interactionButton(toState.style, id) {
+            label = when (toState) {
                 ApplicationState.OPEN -> "Reopen"
                 ApplicationState.ACCEPTED -> "Accept"
                 ApplicationState.DENIED_SILENTLY -> "Deny Silently"
@@ -559,7 +650,7 @@ class ApplicationsExtension : Extension() {
         val actualKey = config.denialReasons.keys.firstOrNull { it.equals(key, true) }
             ?: key
 
-        config.denialReasons[actualKey] = text.replace("{N}", "\n")
+        config.denialReasons[actualKey] = text.replace(NEWLINE_TOKEN, "\n")
 
         configStorage.save()
     }

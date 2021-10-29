@@ -16,7 +16,7 @@ enum class ApplicationState(
     OPEN("Open", DISCORD_BLACK, ButtonStyle.Primary),
 
     ACCEPTED("Accepted", DISCORD_GREEN, ButtonStyle.Success),
-    DENIED("Denied", DISCORD_RED, ButtonStyle.Danger),
+    DENIED("Denied", DISCORD_RED, ButtonStyle.Secondary),
     DENIED_SILENTLY("Denied Silently", DISCORD_RED, ButtonStyle.Danger);
 
     companion object {

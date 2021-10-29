@@ -39,7 +39,7 @@ dependencies {
 
 application {
     // This is deprecated, but the Shadow plugin requires it
-    mainClassName = "template.AppKt"
+    mainClassName = "me.gserv.nate.applications.AppKt"
 }
 
 gitHooks {
