@@ -110,3 +110,6 @@ build/
 
 # Env vars - don't commit this!
 .env
+
+# Data folder
+data/

@@ -3,13 +3,11 @@ package me.gserv.nate.applications.data
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToStream
-import me.gserv.nate.applications.extensions.charPool
-import java.nio.file.Path
-import kotlin.io.path.*
+import kotlin.io.path.createDirectory
+import kotlin.io.path.exists
+import kotlin.io.path.outputStream
+import kotlin.io.path.readText
 import kotlin.random.Random
-
-internal val dataDirectory = Path.of("./data/")
-internal val dataFile = dataDirectory / "config.json"
 
 const val TOKEN_SIZE = 12
 
@@ -21,19 +19,19 @@ class SettingsStorage {
             dataDirectory.createDirectory()
         }
 
-        if (!dataFile.exists()) {
+        if (!configDataFile.exists()) {
             current = Settings(
                 secretToken = getToken(TOKEN_SIZE)
             )
 
             save()
         } else {
-            current = Json.decodeFromString(dataFile.readText())
+            current = Json.decodeFromString(configDataFile.readText())
         }
     }
 
     fun save() {
-        Json.encodeToStream(current, dataFile.outputStream())
+        Json.encodeToStream(current, configDataFile.outputStream())
     }
 
     fun getToken(length: Int) = (1..length)
