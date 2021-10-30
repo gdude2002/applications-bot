@@ -2,6 +2,7 @@ package me.gserv.nate.applications.extensions
 
 import com.kotlindiscord.kord.extensions.DISCORD_BLURPLE
 import com.kotlindiscord.kord.extensions.checks.hasPermission
+import com.kotlindiscord.kord.extensions.checks.noGuild
 import com.kotlindiscord.kord.extensions.commands.Arguments
 import com.kotlindiscord.kord.extensions.commands.application.slash.ephemeralSubCommand
 import com.kotlindiscord.kord.extensions.commands.converters.impl.channel
@@ -33,10 +34,10 @@ import dev.kord.rest.builder.message.create.embed
 import dev.kord.rest.builder.message.modify.MessageModifyBuilder
 import dev.kord.rest.builder.message.modify.actionRow
 import dev.kord.rest.builder.message.modify.embed
-import kotlinx.coroutines.flow.toList
 import me.gserv.nate.applications.GUILD_ID
 import me.gserv.nate.applications.PUBLIC_GUILD_ID
 import me.gserv.nate.applications.data.*
+import mu.KotlinLogging
 
 const val MAX_DENIAL_REASONS = 10
 
@@ -46,6 +47,8 @@ const val REASON_TOKEN = "{REASON}"
 
 class ApplicationsExtension : Extension() {
     override val name: String = "applications"
+
+    val logger = KotlinLogging.logger { }
 
     val applications = ApplicationsStorage()
     val configStorage = SettingsStorage()
@@ -572,15 +575,44 @@ class ApplicationsExtension : Extension() {
         }
 
         event<MessageCreateEvent> {
-            check { failIf { event.message.author == null } }
-            check { failIf { event.guildId != null } }
-            check { failIf { channelId == null } }
-            check { failIf { inviteChannelId == null } }
+            check { noGuild() }
+
+            check {
+                if (event.message.author == null) {
+                    logger.debug { "Failing: Message author is `null`" }
+                    fail()
+
+                    return@check
+                }
+
+                if (channelId == null) {
+                    logger.debug { "Failing: Applications channel ID is `$channelId`" }
+                    fail()
+
+                    return@check
+                }
+
+                if (inviteChannelId == null) {
+                    logger.debug { "Failing: Invite channel ID is `$inviteChannelId`" }
+                    fail()
+
+                    return@check
+                }
+            }
 
             action {
                 val author = event.message.author!!
 
-                if (getApplicationsChannel().getGuild().members.toList().firstOrNull { it.id == author.id } != null) {
+                val guild = getApplicationsChannel().getGuild()
+                val member = guild.getMemberOrNull(author.id)
+
+                if (member != null) {
+                    logger.debug { "Failing: User is already on the target guild - ${member.tag} (${member.id.value})" }
+
+                    event.message.respond {
+                        content = "You're already on **${guild.name}**, so you don't need to apply again!"
+                    }
+
                     return@action
                 }
 
