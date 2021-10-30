@@ -23,6 +23,9 @@ jobs:
         with:
           arguments: build
 
+      - name: Upload artifacts (Main JAR)
+        uses: actions/upload-artifact@v2
+
         with:
           name: Main JAR
           path: build/libs/*-all.jar
