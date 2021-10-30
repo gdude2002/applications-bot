@@ -2,6 +2,7 @@ package me.gserv.nate.applications.extensions
 
 import com.kotlindiscord.kord.extensions.DISCORD_BLURPLE
 import com.kotlindiscord.kord.extensions.checks.hasPermission
+import com.kotlindiscord.kord.extensions.checks.isNotBot
 import com.kotlindiscord.kord.extensions.checks.noGuild
 import com.kotlindiscord.kord.extensions.commands.Arguments
 import com.kotlindiscord.kord.extensions.commands.application.slash.ephemeralSubCommand
@@ -575,6 +576,9 @@ class ApplicationsExtension : Extension() {
         }
 
         event<MessageCreateEvent> {
+            check { failIf { event.message.author?.id == kord.selfId } }
+
+            check { isNotBot() }
             check { noGuild() }
 
             check {
@@ -603,7 +607,7 @@ class ApplicationsExtension : Extension() {
             action {
                 val author = event.message.author!!
 
-                val guild = getApplicationsChannel().getGuild()
+                val guild = getInviteChannel().getGuild()
                 val member = guild.getMemberOrNull(author.id)
 
                 if (member != null) {
