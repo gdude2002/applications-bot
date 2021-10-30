@@ -20,9 +20,7 @@ import dev.kord.core.behavior.channel.createMessage
 import dev.kord.core.behavior.channel.withTyping
 import dev.kord.core.behavior.edit
 import dev.kord.core.behavior.interaction.followUpEphemeral
-import dev.kord.core.entity.channel.GuildMessageChannel
-import dev.kord.core.entity.channel.TopGuildMessageChannel
-import dev.kord.core.entity.channel.createInvite
+import dev.kord.core.entity.channel.*
 import dev.kord.core.event.interaction.ButtonInteractionCreateEvent
 import dev.kord.core.event.message.MessageCreateEvent
 import dev.kord.rest.builder.component.ActionRowBuilder
@@ -36,6 +34,7 @@ import dev.kord.rest.builder.message.modify.embed
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.toList
 import me.gserv.nate.applications.GUILD_ID
+import me.gserv.nate.applications.PUBLIC_GUILD_ID
 import me.gserv.nate.applications.data.*
 
 const val MAX_DENIAL_REASONS = 10
@@ -98,7 +97,7 @@ class ApplicationsExtension : Extension() {
             name = "config"
             description = "Applications configuration commands"
 
-            guild(GUILD_ID)
+            guild(PUBLIC_GUILD_ID)
 
             check { hasPermission(Permission.Administrator) }
 
@@ -149,10 +148,21 @@ class ApplicationsExtension : Extension() {
                 name = "check"
                 description = "Check whether everything is ready to go"
 
-                requireBotPermissions(Permission.CreateInstantInvite)
-
                 action {
                     var failures = false
+
+                    val targetChannel = findInvitableChannel()
+                    val targetChannelPerms = targetChannel.getEffectivePermissions(event.kord.selfId)
+                    val canInvite = targetChannelPerms.contains(Permission.CreateInstantInvite)
+
+                    if (!canInvite) {
+                        respond {
+                            content = "**Error:** I don't have the **Create Invites** permission on " +
+                                    "${targetChannel.mention}."
+                        }
+
+                        failures = true
+                    }
 
                     if (config.channelId == null) {
                         respond {
@@ -432,10 +442,7 @@ class ApplicationsExtension : Extension() {
 
                 when (action) {
                     ApplicationState.ACCEPTED -> {
-                        val channel: TopGuildMessageChannel = getApplicationsChannel()
-                            .getGuild()
-                            .channels
-                            .first { it is TopGuildMessageChannel } as TopGuildMessageChannel
+                        val channel: CategorizableChannel = findInvitableChannel()
 
                         val invite = channel.createInvite {
                             uses = 1
@@ -645,6 +652,11 @@ class ApplicationsExtension : Extension() {
 
     suspend fun getApplicationsChannel() =
         kord.getChannelOf<GuildMessageChannel>(config.channelId!!)!!
+
+    suspend fun findInvitableChannel() =
+        kord.getGuild(GUILD_ID)!!
+            .channels
+            .first { it is CategorizableChannel } as CategorizableChannel
 
     fun setDenialReason(key: String, text: String) {
         val actualKey = config.denialReasons.keys.firstOrNull { it.equals(key, true) }

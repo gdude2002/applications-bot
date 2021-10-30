@@ -11,6 +11,8 @@ services:
 
     environment:
       - GUILD_ID
+      - PUBLIC_GUILD_ID
+
       - TOKEN
 
 volumes:
