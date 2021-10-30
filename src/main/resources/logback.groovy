@@ -4,7 +4,7 @@ def environment = System.getenv().getOrDefault("ENVIRONMENT", "production")
 def defaultLevel = INFO
 
 if (environment == "debug") {
-    defaultLevel = DEBUG
+    defaultLevel = TRACE
 
     // Silence warning about missing native PRNG on Windows
     logger("io.ktor.util.random", ERROR)
