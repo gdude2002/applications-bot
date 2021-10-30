@@ -8,6 +8,7 @@ import kotlinx.serialization.Serializable
 data class Settings(
     var channelId: Snowflake? = null,
     var secretToken: String,
+    var inviteChannelId: Snowflake? = null,
 
     var initialResponse: String =
         "Thanks for your application - we'll get back to you as soon as possible!\n\n" +

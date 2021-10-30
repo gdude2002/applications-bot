@@ -20,7 +20,9 @@ import dev.kord.core.behavior.channel.createMessage
 import dev.kord.core.behavior.channel.withTyping
 import dev.kord.core.behavior.edit
 import dev.kord.core.behavior.interaction.followUpEphemeral
-import dev.kord.core.entity.channel.*
+import dev.kord.core.entity.channel.CategorizableChannel
+import dev.kord.core.entity.channel.GuildMessageChannel
+import dev.kord.core.entity.channel.createInvite
 import dev.kord.core.event.interaction.ButtonInteractionCreateEvent
 import dev.kord.core.event.message.MessageCreateEvent
 import dev.kord.rest.builder.component.ActionRowBuilder
@@ -31,9 +33,7 @@ import dev.kord.rest.builder.message.create.embed
 import dev.kord.rest.builder.message.modify.MessageModifyBuilder
 import dev.kord.rest.builder.message.modify.actionRow
 import dev.kord.rest.builder.message.modify.embed
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.toList
-import me.gserv.nate.applications.GUILD_ID
 import me.gserv.nate.applications.PUBLIC_GUILD_ID
 import me.gserv.nate.applications.data.*
 
@@ -62,6 +62,12 @@ class ApplicationsExtension : Extension() {
         get() = config.channelId
         set(value) {
             config.channelId = value; configStorage.save()
+        }
+
+    var inviteChannelId: Snowflake?
+        get() = config.inviteChannelId
+        set(value) {
+            config.inviteChannelId = value; configStorage.save()
         }
 
     var initialResponse: String
@@ -151,7 +157,7 @@ class ApplicationsExtension : Extension() {
                 action {
                     var failures = false
 
-                    val targetChannel = findInvitableChannel()
+                    val targetChannel = getInviteChannel()
                     val targetChannelPerms = targetChannel.getEffectivePermissions(event.kord.selfId)
                     val canInvite = targetChannelPerms.contains(Permission.CreateInstantInvite)
 
@@ -167,7 +173,7 @@ class ApplicationsExtension : Extension() {
                     if (config.channelId == null) {
                         respond {
                             content = "**Error:** No applications channel has been set - set one with " +
-                                    "`/config channel`"
+                                    "`/config applications-channel`"
                         }
 
                         failures = true
@@ -179,7 +185,31 @@ class ApplicationsExtension : Extension() {
                             respond {
                                 content =
                                     "**Error:** Unable to get configured applications channel - set another " +
-                                            "with `/config channel`\n\n" +
+                                            "with `/config applications-channel`\n\n" +
+
+                                            "**Exception thrown:** ```\n$e\n```"
+                            }
+
+                            failures = true
+                        }
+                    }
+
+                    if (config.inviteChannelId == null) {
+                        respond {
+                            content = "**Error:** No invite channel has been set - set one with " +
+                                    "`/config invite-channel`"
+                        }
+
+                        failures = true
+                    } else {
+                        @Suppress("TooGenericExceptionCaught")
+                        try {
+                            getInviteChannel()
+                        } catch (e: Exception) {
+                            respond {
+                                content =
+                                    "**Error:** Unable to get configured invite channel - set another " +
+                                            "with `/config invite-channel`\n\n" +
 
                                             "**Exception thrown:** ```\n$e\n```"
                             }
@@ -385,7 +415,7 @@ class ApplicationsExtension : Extension() {
             }
 
             ephemeralSubCommand(::ChannelArgs) {
-                name = "channel"
+                name = "applications-channel"
                 description = "Set which channel should be used for submitted applications"
 
                 action {
@@ -393,6 +423,19 @@ class ApplicationsExtension : Extension() {
 
                     respond {
                         content = "Applications channel set to ${arguments.channel.mention}"
+                    }
+                }
+            }
+
+            ephemeralSubCommand(::ChannelArgs) {
+                name = "invite-channel"
+                description = "Set which channel should be used to create invites"
+
+                action {
+                    inviteChannelId = arguments.channel.id
+
+                    respond {
+                        content = "Invite channel set to ${arguments.channel.mention}"
                     }
                 }
             }
@@ -442,7 +485,7 @@ class ApplicationsExtension : Extension() {
 
                 when (action) {
                     ApplicationState.ACCEPTED -> {
-                        val channel: CategorizableChannel = findInvitableChannel()
+                        val channel: CategorizableChannel = getInviteChannel()
 
                         val invite = channel.createInvite {
                             uses = 1
@@ -527,6 +570,7 @@ class ApplicationsExtension : Extension() {
             check { failIf { event.message.author == null } }
             check { failIf { event.guildId != null } }
             check { failIf { channelId == null } }
+            check { failIf { inviteChannelId == null } }
 
             action {
                 val author = event.message.author!!
@@ -653,10 +697,8 @@ class ApplicationsExtension : Extension() {
     suspend fun getApplicationsChannel() =
         kord.getChannelOf<GuildMessageChannel>(config.channelId!!)!!
 
-    suspend fun findInvitableChannel() =
-        kord.getGuild(GUILD_ID)!!
-            .channels
-            .first { it is CategorizableChannel } as CategorizableChannel
+    suspend fun getInviteChannel() =
+        kord.getChannelOf<CategorizableChannel>(config.inviteChannelId!!)!!
 
     fun setDenialReason(key: String, text: String) {
         val actualKey = config.denialReasons.keys.firstOrNull { it.equals(key, true) }
