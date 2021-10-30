@@ -1,0 +1,17 @@
+version: "3"
+services:
+  applications-bot:
+    image: ghcr.io/gdude2002/applications-bot:latest
+    container_name: applications-bot
+
+    restart: always
+
+    volumes:
+    - "applications-bot-data:/data"
+
+    environment:
+      - GUILD_ID
+      - TOKEN
+
+volumes:
+  applications-bot-data:

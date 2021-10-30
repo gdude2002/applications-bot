@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - root
-      - develop
 
 jobs:
   build:
@@ -20,10 +19,9 @@ jobs:
           java-version: 1.11
 
       - name: Gradle (Build)
-        run: sh gradlew build
-
-      - name: Upload artifacts (Main JAR)
-        uses: actions/upload-artifact@v2
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: build
 
         with:
           name: Main JAR
@@ -35,3 +33,14 @@ jobs:
         with:
           name: JARs
           path: build/libs/*.jar
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - run: docker build -t ghcr.io/gdude2002/applications-bot:latest -t ghcr.io/gdude2002/applications-bot:${GITHUB_SHA} .
+      - run: docker push ghcr.io/gdude2002/applications-bot:latest
+      - run: docker push ghcr.io/gdude2002/applications-bot:${GITHUB_SHA}
