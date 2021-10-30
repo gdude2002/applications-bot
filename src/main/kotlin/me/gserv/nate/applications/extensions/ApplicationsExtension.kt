@@ -34,6 +34,7 @@ import dev.kord.rest.builder.message.modify.MessageModifyBuilder
 import dev.kord.rest.builder.message.modify.actionRow
 import dev.kord.rest.builder.message.modify.embed
 import kotlinx.coroutines.flow.toList
+import me.gserv.nate.applications.GUILD_ID
 import me.gserv.nate.applications.PUBLIC_GUILD_ID
 import me.gserv.nate.applications.data.*
 
@@ -98,6 +99,23 @@ class ApplicationsExtension : Extension() {
     override suspend fun setup() {
         applications.load()
         configStorage.load()
+
+        ephemeralSlashCommand(::ChannelArgs) {
+            name = "invite-channel"
+            description = "Set which channel should be used to create invites"
+
+            guild(GUILD_ID)
+
+            check { hasPermission(Permission.Administrator) }
+
+            action {
+                inviteChannelId = arguments.channel.id
+
+                respond {
+                    content = "Invite channel set to ${arguments.channel.mention}"
+                }
+            }
+        }
 
         ephemeralSlashCommand {
             name = "config"
@@ -197,7 +215,7 @@ class ApplicationsExtension : Extension() {
                     if (config.inviteChannelId == null) {
                         respond {
                             content = "**Error:** No invite channel has been set - set one with " +
-                                    "`/config invite-channel`"
+                                    "`/invite-channel` on the target server"
                         }
 
                         failures = true
@@ -209,7 +227,7 @@ class ApplicationsExtension : Extension() {
                             respond {
                                 content =
                                     "**Error:** Unable to get configured invite channel - set another " +
-                                            "with `/config invite-channel`\n\n" +
+                                            "with `/invite-channel` on the target server\n\n" +
 
                                             "**Exception thrown:** ```\n$e\n```"
                             }
@@ -423,19 +441,6 @@ class ApplicationsExtension : Extension() {
 
                     respond {
                         content = "Applications channel set to ${arguments.channel.mention}"
-                    }
-                }
-            }
-
-            ephemeralSubCommand(::ChannelArgs) {
-                name = "invite-channel"
-                description = "Set which channel should be used to create invites"
-
-                action {
-                    inviteChannelId = arguments.channel.id
-
-                    respond {
-                        content = "Invite channel set to ${arguments.channel.mention}"
                     }
                 }
             }
