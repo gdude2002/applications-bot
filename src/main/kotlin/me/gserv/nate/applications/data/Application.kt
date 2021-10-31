@@ -12,4 +12,5 @@ data class Application(
 
     var applicationMessageId: Snowflake? = null,
     var state: ApplicationState = ApplicationState.OPEN,
+    var denialReason: String? = null,
 )

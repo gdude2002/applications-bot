@@ -541,6 +541,8 @@ class ApplicationsExtension : Extension() {
                         }
 
                         app.state = ApplicationState.DENIED
+                        app.denialReason = reason
+
                         applications.save()
 
                         getApplicationsChannel().getMessage(app.applicationMessageId!!).edit {
@@ -702,7 +704,13 @@ class ApplicationsExtension : Extension() {
         description = app.text
 
         footer {
-            text = "${app.state.readableName} | "
+            text = app.state.readableName
+
+            if (app.state == ApplicationState.DENIED && app.denialReason != null) {
+                text += ": ${app.denialReason}"
+            }
+
+            text += " | "
 
             val user = kord.getUser(app.userId)
 
