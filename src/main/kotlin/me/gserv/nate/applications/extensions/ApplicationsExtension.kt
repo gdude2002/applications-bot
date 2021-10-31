@@ -498,6 +498,7 @@ class ApplicationsExtension : Extension() {
 
                         val invite = channel.createInvite {
                             uses = 1
+                            unique = true
 
                             this.reason = "Application accepted: ${user.tag}"
                         }
