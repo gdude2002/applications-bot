@@ -2,6 +2,7 @@ package me.gserv.nate.applications.extensions
 
 import com.kotlindiscord.kord.extensions.DISCORD_BLURPLE
 import com.kotlindiscord.kord.extensions.checks.hasPermission
+import com.kotlindiscord.kord.extensions.checks.inChannel
 import com.kotlindiscord.kord.extensions.checks.isNotBot
 import com.kotlindiscord.kord.extensions.checks.noGuild
 import com.kotlindiscord.kord.extensions.commands.Arguments
@@ -10,6 +11,7 @@ import com.kotlindiscord.kord.extensions.commands.converters.impl.channel
 import com.kotlindiscord.kord.extensions.commands.converters.impl.optionalString
 import com.kotlindiscord.kord.extensions.commands.converters.impl.string
 import com.kotlindiscord.kord.extensions.extensions.Extension
+import com.kotlindiscord.kord.extensions.extensions.ephemeralMessageCommand
 import com.kotlindiscord.kord.extensions.extensions.ephemeralSlashCommand
 import com.kotlindiscord.kord.extensions.extensions.event
 import com.kotlindiscord.kord.extensions.types.editingPaginator
@@ -45,6 +47,8 @@ const val MAX_DENIAL_REASONS = 10
 const val INVITE_TOKEN = "{INVITE}"
 const val NEWLINE_TOKEN = "{N}"
 const val REASON_TOKEN = "{REASON}"
+
+val OLD_ID_REGEX = "[a-z0-9]{2}-[a-z0-9]{2}-[a-z0-9]{3}".toRegex(RegexOption.IGNORE_CASE)
 
 class ApplicationsExtension : Extension() {
     override val name: String = "applications"
@@ -103,6 +107,47 @@ class ApplicationsExtension : Extension() {
     override suspend fun setup() {
         applications.load()
         configStorage.load()
+
+        ephemeralMessageCommand {
+            name = "Fix Old Application"
+
+            guild(PUBLIC_GUILD_ID)
+
+            check { hasPermission(Permission.Administrator) }
+
+            check {
+                failIf("Applications channel hasn't been configured - try `/config check`") {
+                    channelId == null
+                }
+            }
+
+            check { inChannel(channelId!!) }
+
+            action {
+                val target = targetMessages.first()
+                val app = applications.getApplicationsByMessage(target.id).first()
+
+                if (!OLD_ID_REGEX.matches(app.applicationId)) {
+                    respond {
+                        content = "This doesn't look like an old application! Old applications have an ID that " +
+                                "looks like this: `kl-av-mGs`"
+                    }
+
+                    return@action
+                }
+
+                app.applicationId = target.id.asString
+                applications.save()
+
+                target.edit {
+                    addApplication(app)
+                }
+
+                respond {
+                    content = "Old application fixed - the new ID is ${app.applicationId}."
+                }
+            }
+        }
 
         ephemeralSlashCommand(::ChannelArgs) {
             name = "invite-channel"
