@@ -633,7 +633,7 @@ class ApplicationsExtension : Extension() {
                     return@action
                 }
 
-                val application = applications.createApplication(author.id, event.message.content)
+                val application = applications.createApplication(event.message.id, author.id, event.message.content)
                 val embedMessage = getApplicationsChannel().createMessage { addApplication(application) }
 
                 application.applicationMessageId = embedMessage.id

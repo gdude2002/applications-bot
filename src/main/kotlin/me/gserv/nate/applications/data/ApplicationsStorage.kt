@@ -1,9 +1,6 @@
 package me.gserv.nate.applications.data
 
 import dev.kord.common.entity.Snowflake
-import kotlinx.datetime.Clock
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToStream
@@ -46,21 +43,8 @@ class ApplicationsStorage {
         current.filter { it.applicationMessageId == id && (state == null || it.state == state) }
 
     @Suppress("MagicNumber")
-    fun createApplication(userId: Snowflake, text: String): Application {
-        val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
-
-        val applicationId: String = "" +
-                charPool[now.year.toString().substring(0..1).toInt()] +
-                charPool[now.year.toString().substring(2..3).toInt()] +
-                '-' +
-                charPool[now.monthNumber] +
-                charPool[now.dayOfMonth] +
-                '-' +
-                charPool[now.hour] +
-                charPool[now.minute] +
-                charPool[now.second]
-
-        val application = Application(applicationId, userId, text)
+    fun createApplication(messageId: Snowflake, userId: Snowflake, text: String): Application {
+        val application = Application(messageId.asString, userId, text)
 
         current.add(application)
         save()
